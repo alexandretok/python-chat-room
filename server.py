@@ -2,6 +2,7 @@ import socket
 import datetime
 import threading
 
+# Pequena gambiarra para possibilitar um objeto generico
 class Object(object):
     pass
 
@@ -17,25 +18,33 @@ listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 listen_socket.bind(('', PORT))
 listen_socket.listen(0)
 
-def configuracaoNovoCliente(cliente):
+def threadDoCliente(cliente):
 	global listaClientes
+
+	print str(len(listaClientes)) + " clientes conectados"
 
 	cliente.conn.send("Digite seu apelido: ");
 	cliente.apelido = cliente.conn.recv(1024).replace("\r\n", "")
+	
 	broadcast(cliente.apelido + " entrou na sala.")
 
 	# Configura um timeout para saber quando o cliente encerrou a conexao
-	cliente.conn.settimeout(10)
+	cliente.conn.settimeout(20)
 	disconnected = False
 	while not disconnected:
 		try:
 			msg = cliente.conn.recv(1024).replace("\r\n", "")
+
+			# A mensagem ___heart_beat___ serve apenas para nao dar timeout
+			if msg != "___heart_beat___":
+				broadcast(cliente.apelido + ": " + msg)
 		except socket.timeout:
 			disconnected = True
 
 	cliente.conn.close()
 	listaClientes.remove(cliente)
 	broadcast(cliente.apelido + " saiu da sala.")
+	print str(len(listaClientes)) + " clientes conectados"
 
 # Envia uma string para todos os clientes conectados
 def broadcast(string):
@@ -59,7 +68,7 @@ while True:
 	listaClientes.append(tmp)
 	
 	# Cria e inicia nova thread
-	threading.Thread(target=configuracaoNovoCliente, args=(tmp,)).start()
+	threading.Thread(target=threadDoCliente, args=(tmp,)).start()
 	
 	# Incrementa ID
 	threadID += 1
