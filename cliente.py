@@ -47,15 +47,18 @@ doupdate()
 
 def threadRecebe():
 	global clientSocket, conectado, linha, janelaPrincipal, apelido, janelaUsuarios
-	clientSocket.settimeout(2)
+	clientSocket.settimeout(1)
 	while conectado:
 		try:
-			msgRecebida = clientSocket.recv(1024).replace("\n", "")
+			msgRecebida = clientSocket.recv(1024).replace("\r\n", "")
+			wmove(janelaPrincipal, linha, 1)
 			if msgRecebida == "__SAIR__":
+				waddstr(janelaPrincipal, "O servidor de chat foi encerrado! Pressione ENTER para sair.", color_pair(3))
 				clientSocket.close()
 				conectado = False
+				update_panels()
+				doupdate()
 				break
-			wmove(janelaPrincipal, linha, 1)
 			if msgRecebida.find("__CLIENTES__") > -1:
 				clientes = msgRecebida.split(":")[1].split(",")
 				for i in range(2, LINES - 4):
@@ -84,7 +87,7 @@ def threadRecebe():
 			time.sleep(0)
 
 threading.Thread(target=threadRecebe).start()
-while True:
+while conectado:
 	msgAEnviar = wgetstr(janelaTexto)
 
 	# Remove o que o usuario acabou de digitar da caixa de texto

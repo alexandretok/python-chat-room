@@ -17,15 +17,17 @@ ANTI_FLOOD_MSG_QTD = 5 # Quantidade de mensagens que podem ser enviada dentro do
 
 # Variaveis globais
 listaClientes = []
+sair = False
 
 # Configuracao do socket
 listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 listen_socket.bind(('', PORT))
+listen_socket.settimeout(1)
 listen_socket.listen(0)
 
 def threadDoCliente(cliente):
-	global listaClientes, TIMEOUT, ANTI_FLOOD_MSG_QTD, ANTI_FLOOD_TIME_LIMIT
+	global listaClientes, TIMEOUT, ANTI_FLOOD_MSG_QTD, ANTI_FLOOD_TIME_LIMIT, sair
 
 	# Essa lista guarda o tempo de envio das ultimas 5 mensagens enviadas pelo cliente
 	ultimasMensagens = Queue.Queue(ANTI_FLOOD_MSG_QTD)
@@ -43,7 +45,7 @@ def threadDoCliente(cliente):
 	# cliente.conn.settimeout(TIMEOUT)
 	disconnected = False
 	quintaUltima = None
-	while not disconnected:
+	while not disconnected and not sair:
 		try:
 			msg = cliente.conn.recv(1024)
 
@@ -71,11 +73,12 @@ def threadDoCliente(cliente):
 	atualizarClientesOnline()
 
 def recebeComandos():
-	while True:
-		global listaClientes
+	global listaClientes, sair
+	while not sair:
 		var = raw_input("""
 Lista de comandos:
  listar (ls): apresenta uma lista dos usuarios conectados no momento
+ sair   (q) : encerrar servidor
 
 """)
 		if var == "listar" or var == "ls":
@@ -84,6 +87,10 @@ Lista de comandos:
 			else:
 				for cliente in listaClientes:
 					print "<" + (cliente.apelido if hasattr(cliente, "apelido") else "Anonimo") + ", " + str(cliente.addr[0]) + ", " + str(cliente.addr[1]) + ">"
+		elif var == "sair" or var == "q":
+			sair = True
+			broadcast("__SAIR__", True)
+			
 	
 
 # Envia uma string para todos os clientes conectados
@@ -111,20 +118,23 @@ def atualizarClientesOnline():
 threadID = 0
 threading.Thread(target=recebeComandos).start()
 
-while True:
-	# Fica preso aqui enquanto nao receber uma nova conexao
-	client_connection, client_address = listen_socket.accept()
+while not sair:
+	try:
+		# Fica preso aqui enquanto nao receber uma nova conexao
+		client_connection, client_address = listen_socket.accept()
 
-	tmp = Object()
-	tmp.id = threadID
-	tmp.conn = client_connection
-	tmp.addr = client_address
-	tmp.apelido = "Anonimo"
+		tmp = Object()
+		tmp.id = threadID
+		tmp.conn = client_connection
+		tmp.addr = client_address
+		tmp.apelido = "Anonimo"
 
-	listaClientes.append(tmp)
+		listaClientes.append(tmp)
 	
-	# Cria e inicia nova thread
-	threading.Thread(target=threadDoCliente, args=(tmp,)).start()
+		# Cria e inicia nova thread
+		threading.Thread(target=threadDoCliente, args=(tmp,)).start()
 	
-	# Incrementa ID
-	threadID += 1
+		# Incrementa ID
+		threadID += 1
+	except:
+		time.sleep(0)
