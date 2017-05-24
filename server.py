@@ -3,6 +3,7 @@ import datetime
 import threading
 import Queue
 import time
+import readline
 
 # Pequena gambiarra para possibilitar um objeto generico
 class Object(object):
@@ -10,7 +11,7 @@ class Object(object):
 
 # Constantes
 PORT = 6666
-TIMEOUT = 20
+# TIMEOUT = 60
 ANTI_FLOOD_TIME_LIMIT = 2 # Tempo limite (em segundos)
 ANTI_FLOOD_MSG_QTD = 5 # Quantidade de mensagens que podem ser enviada dentro do tempo limite
 
@@ -29,13 +30,17 @@ def threadDoCliente(cliente):
 	# Essa lista guarda o tempo de envio das ultimas 5 mensagens enviadas pelo cliente
 	ultimasMensagens = Queue.Queue(ANTI_FLOOD_MSG_QTD)
 
-	cliente.conn.send("Digite seu apelido: ")
+	# cliente.conn.send("Digite seu apelido: ")
 	cliente.apelido = cliente.conn.recv(1024).replace("\r\n", "")
+
+	atualizarClientesOnline()
+
+	time.sleep(1)
 	
 	broadcast(cliente.apelido + " entrou na sala.")
 
 	# Configura um timeout para saber quando o cliente encerrou a conexao
-	cliente.conn.settimeout(TIMEOUT)
+	# cliente.conn.settimeout(TIMEOUT)
 	disconnected = False
 	quintaUltima = None
 	while not disconnected:
@@ -52,8 +57,7 @@ def threadDoCliente(cliente):
 				quintaUltima = ultimasMensagens.get(False)
 
 			if ultimasMensagens.qsize() == 4 and quintaUltima != None and (time.time() - quintaUltima) <= ANTI_FLOOD_TIME_LIMIT:
-				print "Stop the flood!"
-				cliente.conn.send("Stop the flood!\n")
+				cliente.conn.send("Voce nao pode enviar mais de 5 mensagens a cada 2 segundos.\n")
 			elif msg != "__heart_beat__": # A mensagem ___heart_beat___ serve apenas para nao dar timeout
 				broadcast(cliente.apelido + " escreveu: " + msg)
 				ultimasMensagens.put(time.time())
@@ -63,6 +67,7 @@ def threadDoCliente(cliente):
 	cliente.conn.close()
 	listaClientes.remove(cliente)
 	broadcast(cliente.apelido + " saiu da sala.")
+	atualizarClientesOnline()
 
 def recebeComandos():
 	while True:
@@ -75,19 +80,29 @@ Lista de comandos:
 		if var == "listar" or var == "ls":
 			if not len(listaClientes):
 				print "Nenhum cliente conectado."
-			for cliente in listaClientes:
-				print "<" + (cliente.apelido if hasattr(cliente, "apelido") else "_EMPTY_") + ", " + str(cliente.addr[0]) + ", " + str(cliente.addr[1]) + ">"
+			else:
+				for cliente in listaClientes:
+					print "<" + (cliente.apelido if hasattr(cliente, "apelido") else "Anonimo") + ", " + str(cliente.addr[0]) + ", " + str(cliente.addr[1]) + ">"
 	
 
 # Envia uma string para todos os clientes conectados
-def broadcast(string):
+def broadcast(string, raw = False):
 	global listaClientes
 	now = datetime.datetime.now();
 	for cliente in listaClientes:
 		try:
-			cliente.conn.send(str(now.hour) + ":"+ str(now.minute) + ":" + str(now.second) + " - " + string + "\n");
+			if not raw:
+				cliente.conn.send(str(now.hour).zfill(2) + ":"+ str(now.minute).zfill(2) + ":" + str(now.second).zfill(2) + " - " + string + "\r\n");
+			else:
+				cliente.conn.send(string);
 		except:
 			time.sleep(0)
+
+def atualizarClientesOnline():
+	clientesOnline = "__CLIENTES__:"
+	for cliente in listaClientes:
+		clientesOnline += cliente.apelido + ","
+	broadcast(clientesOnline, True)
 
 # Main loop
 
@@ -102,6 +117,7 @@ while True:
 	tmp.id = threadID
 	tmp.conn = client_connection
 	tmp.addr = client_address
+	tmp.apelido = "Anonimo"
 
 	listaClientes.append(tmp)
 	
