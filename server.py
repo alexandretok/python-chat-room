@@ -57,8 +57,8 @@ def threadDoCliente(cliente):
 				quintaUltima = ultimasMensagens.get(False)
 
 			if ultimasMensagens.qsize() == 4 and quintaUltima != None and (time.time() - quintaUltima) <= ANTI_FLOOD_TIME_LIMIT:
-				cliente.conn.send("Voce nao pode enviar mais de 5 mensagens a cada 2 segundos.\n")
-			elif msg != "__heart_beat__": # A mensagem ___heart_beat___ serve apenas para nao dar timeout
+				cliente.conn.send("__WARNING__:Voce nao pode enviar mais de 5 mensagens a cada 2 segundos.\r\n")
+			else:
 				broadcast(cliente.apelido + " escreveu: " + msg)
 				ultimasMensagens.put(time.time())
 		except socket.timeout:
@@ -102,6 +102,7 @@ def atualizarClientesOnline():
 	clientesOnline = "__CLIENTES__:"
 	for cliente in listaClientes:
 		clientesOnline += cliente.apelido + ","
+	clientesOnline = clientesOnline[:-1]
 	broadcast(clientesOnline, True)
 
 # Main loop

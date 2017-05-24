@@ -23,7 +23,7 @@ init_pair(2, 6, -1) # Suas proprias mensagens
 init_pair(3, 9, -1) # Clientes online
 
 janelaPrincipal = newwin(LINES - 3, COLS - 30, 0, 0)
-box(janelaPrincipal)
+scrollok(janelaPrincipal, True)
 wmove(janelaPrincipal, 1, 1)
 waddstr(janelaPrincipal, "Mensagens recebidas:")
 painelPrincipal = new_panel(janelaPrincipal)
@@ -60,21 +60,26 @@ def threadRecebe():
 				clientes = msgRecebida.split(":")[1].split(",")
 				for i in range(2, LINES - 4):
 					wmove(janelaUsuarios, i, 1)
-					if len(clientes) - 1 <= i-2:
-						wdeleteln(janelaUsuarios)
-						winsdelln(janelaUsuarios, 1)
-						box(janelaUsuarios)
-					else:
-						waddstr(janelaUsuarios, str(i-1) + ") " + clientes[i-2], color_pair(3))
+					wdeleteln(janelaUsuarios)
+					winsdelln(janelaUsuarios, 1)
+					box(janelaUsuarios)
+					if len(clientes) > i-2:
+						color = 3 if clientes[i-2] != apelido else 2
+						waddstr(janelaUsuarios, str(i-1) + ") " + clientes[i-2], color_pair(color))
+			elif msgRecebida.find("__WARNING__:") > -1:
+				waddstr(janelaPrincipal, msgRecebida.replace("__WARNING__:", ""), color_pair(3))
 			elif msgRecebida.find("entrou na sala.") > -1:
 				waddstr(janelaPrincipal, msgRecebida, color_pair(1))
 			elif msgRecebida.find("- " + apelido + " escreveu:") > -1:
 				waddstr(janelaPrincipal, msgRecebida, color_pair(2))
 			else:
 				waddstr(janelaPrincipal, msgRecebida)
+
+			linha += 1
+			if linha > LINES - 10:
+				wscrl(janelaPrincipal, 1) # Scroll
 			update_panels()
 			doupdate()
-			linha += 1
 		except:
 			time.sleep(0)
 
