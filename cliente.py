@@ -18,9 +18,9 @@ stdscr = initscr()
 LINES, COLS = getmaxyx(stdscr)
 start_color()
 use_default_colors()
-init_pair(1, 1, -1) # Alguem entrou na sala
+init_pair(1, 2, -1) # Alguem entrou na sala
 init_pair(2, 6, -1) # Suas proprias mensagens
-init_pair(3, 9, -1) # Clientes online
+init_pair(3, 3, -1) # Clientes online
 
 janelaPrincipal = newwin(LINES - 3, COLS - 30, 0, 0)
 scrollok(janelaPrincipal, True)
@@ -63,20 +63,20 @@ def threadRecebe():
 					wdeleteln(janelaUsuarios)
 					winsdelln(janelaUsuarios, 1)
 					box(janelaUsuarios)
-					if len(clientes) > i-2:
-						color = 3 if clientes[i-2] != apelido else 2
-						waddstr(janelaUsuarios, str(i-1) + ") " + clientes[i-2], color_pair(color))
+					if len(clientes) > i - 2:
+						color = 3 if clientes[i - 2] != apelido else 2
+						waddstr(janelaUsuarios, str(i - 1) + ") " + clientes[i - 2], color_pair(color))
 			elif msgRecebida.find("__WARNING__:") > -1:
 				waddstr(janelaPrincipal, msgRecebida.replace("__WARNING__:", ""), color_pair(3))
 			elif msgRecebida.find("entrou na sala.") > -1:
 				waddstr(janelaPrincipal, msgRecebida, color_pair(1))
 			elif msgRecebida.find("- " + apelido + " escreveu:") > -1:
 				waddstr(janelaPrincipal, msgRecebida, color_pair(2))
-			else:
+			elif msgRecebida != "":
 				waddstr(janelaPrincipal, msgRecebida)
 
 			linha += 1
-			if linha > LINES - 10:
+			if linha > LINES - 5:
 				wscrl(janelaPrincipal, 1) # Scroll
 			update_panels()
 			doupdate()

@@ -67,6 +67,7 @@ def threadDoCliente(cliente):
 	cliente.conn.close()
 	listaClientes.remove(cliente)
 	broadcast(cliente.apelido + " saiu da sala.")
+	time.sleep(1)
 	atualizarClientesOnline()
 
 def recebeComandos():
