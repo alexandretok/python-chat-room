@@ -4,6 +4,7 @@ import threading
 import Queue
 import time
 import readline
+import re
 
 # Pequena gambiarra para possibilitar um objeto generico
 class Object(object):
@@ -54,6 +55,17 @@ def threadDoCliente(cliente):
 				break
 
 			msg = msg.replace("\r\n", "")
+
+			# Altera o apelido do cliente
+			if re.match(r'^(nome)(\(.+\))$', msg):
+				apelido = msg.split("(")[1][0:-1]
+				apelidoAnterior = cliente.apelido
+				cliente.apelido = apelido
+				atualizarClientesOnline()
+				time.sleep(1)
+				broadcast(apelidoAnterior + " alterou seu apelido para " + apelido)
+				
+				continue
 
 			if ultimasMensagens.full():
 				quintaUltima = ultimasMensagens.get(False)
