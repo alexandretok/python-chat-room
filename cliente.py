@@ -1,7 +1,7 @@
 import threading
 import time
 import socket
-from unicurses import *
+import curses, curses.panel
 
 # Configura socket
 serverName = 'localhost'
@@ -14,36 +14,36 @@ linha = 2
 apelido = False
 
 # Configura Paineis
-stdscr = initscr()
-LINES, COLS = getmaxyx(stdscr)
-start_color()
-use_default_colors()
-init_pair(1, 2, -1) # Alguem entrou na sala
-init_pair(2, 6, -1) # Suas proprias mensagens
-init_pair(3, 3, -1) # Clientes online
+stdscr = curses.initscr()
+LINES, COLS = stdscr.getmaxyx()
+curses.start_color()
+curses.use_default_colors()
+curses.init_pair(1, 2, -1) # Alguem entrou na sala
+curses.init_pair(2, 6, -1) # Suas proprias mensagens
+curses.init_pair(3, 3, -1) # Clientes online
 
-janelaPrincipal = newwin(LINES - 3, COLS - 30, 0, 0)
-scrollok(janelaPrincipal, True)
-wmove(janelaPrincipal, 1, 1)
-waddstr(janelaPrincipal, "Mensagens recebidas:")
-painelPrincipal = new_panel(janelaPrincipal)
+janelaPrincipal = curses.newwin(LINES - 3, COLS - 30, 0, 0)
+janelaPrincipal.scrollok(True)
+janelaPrincipal.move(1, 1)
+janelaPrincipal.addstr("Mensagens recebidas:")
+painelPrincipal = curses.panel.new_panel(janelaPrincipal)
 
-janelaUsuarios = newwin(LINES - 3, 30, 0, COLS - 30)
-box(janelaUsuarios)
-scrollok(janelaUsuarios, True)
-wmove(janelaUsuarios, 1, 1)
-waddstr(janelaUsuarios, "Usuarios online:")
-painelUsuarios = new_panel(janelaUsuarios)
+janelaUsuarios = curses.newwin(LINES - 3, 30, 0, COLS - 30)
+janelaUsuarios.box()
+janelaUsuarios.scrollok(True)
+janelaUsuarios.move(1, 1)
+janelaUsuarios.addstr("Usuarios online:")
+painelUsuarios = curses.panel.new_panel(janelaUsuarios)
 
-janelaTexto = newwin(3, COLS, LINES - 3, 0)
-keypad(janelaTexto, True)
-box(janelaTexto)
-wmove(janelaTexto, 1, 1)
-waddstr(janelaTexto, "Digite seu apelido: ")
-painelTexto = new_panel(janelaTexto)
+janelaTexto = curses.newwin(3, COLS, LINES - 3, 0)
+janelaTexto.keypad(True)
+janelaTexto.box()
+janelaTexto.move(1, 1)
+janelaTexto.addstr("Digite seu apelido: ")
+painelTexto = curses.panel.new_panel(janelaTexto)
 
-update_panels()
-doupdate()
+curses.panel.update_panels()
+curses.doupdate()
 
 def threadRecebe():
 	global clientSocket, conectado, linha, janelaPrincipal, apelido, janelaUsuarios
@@ -51,59 +51,65 @@ def threadRecebe():
 	while conectado:
 		try:
 			msgRecebida = clientSocket.recv(1024).replace("\r\n", "")
-			wmove(janelaPrincipal, linha, 1)
+			janelaPrincipal.move(linha, 1)
+
 			if msgRecebida == "__SAIR__":
-				waddstr(janelaPrincipal, "O servidor de chat foi encerrado! Pressione ENTER para sair.", color_pair(3))
+				janelaPrincipal.addstr("O servidor de chat foi encerrado! Pressione ENTER para sair.", curses.color_pair(3))
 				clientSocket.close()
 				conectado = False
-				update_panels()
-				doupdate()
+				curses.panel.update_panels()
+				curses.doupdate()
 				break
 			if msgRecebida.find("__CLIENTES__") > -1:
 				clientes = msgRecebida.split(":")[1].split(",")
 				for i in range(2, LINES - 4):
-					wmove(janelaUsuarios, i, 1)
-					wdeleteln(janelaUsuarios)
-					winsdelln(janelaUsuarios, 1)
-					box(janelaUsuarios)
+					janelaUsuarios.move(i, 1)
+					janelaUsuarios.deleteln()
+					janelaUsuarios.insdelln(1)
+					janelaUsuarios.box()
 					if len(clientes) > i - 2:
 						color = 3 if clientes[i - 2] != apelido else 2
-						waddstr(janelaUsuarios, str(i - 1) + ") " + clientes[i - 2], color_pair(color))
+						janelaUsuarios.addstr(str(i - 1) + ") " + clientes[i - 2], curses.color_pair(color))
+				curses.panel.update_panels()
+				curses.doupdate()
+				continue
 			elif msgRecebida.find("__WARNING__:") > -1:
-				waddstr(janelaPrincipal, msgRecebida.replace("__WARNING__:", ""), color_pair(3))
+				janelaPrincipal.addstr(msgRecebida.replace("__WARNING__:", ""), curses.color_pair(3))
 			elif msgRecebida.find("entrou na sala.") > -1:
-				waddstr(janelaPrincipal, msgRecebida, color_pair(1))
+				janelaPrincipal.addstr(msgRecebida, curses.color_pair(1))
 			elif msgRecebida.find("- " + apelido + " escreveu:") > -1:
-				waddstr(janelaPrincipal, msgRecebida, color_pair(2))
+				janelaPrincipal.addstr(msgRecebida, curses.color_pair(2))
 			elif msgRecebida != "":
-				waddstr(janelaPrincipal, msgRecebida)
+				janelaPrincipal.addstr(msgRecebida)
 
-			linha += 1
+			
 			if linha > LINES - 5:
-				wscrl(janelaPrincipal, 1) # Scroll
-			update_panels()
-			doupdate()
+				janelaPrincipal.scroll(1) # Scroll
+			else:
+				linha += 1
+			curses.panel.update_panels()
+			curses.doupdate()
 		except:
 			time.sleep(0)
 
 threading.Thread(target=threadRecebe).start()
 while conectado:
-	msgAEnviar = wgetstr(janelaTexto)
+	msgAEnviar = janelaTexto.getstr()
 
 	# Remove o que o usuario acabou de digitar da caixa de texto
-	wmove(janelaTexto, 1, 1)
-	wdeleteln(janelaTexto)
-	winsdelln(janelaTexto, 1)
-	box(janelaTexto)
-	wmove(janelaTexto, 1, 1)
-	waddstr(janelaTexto, "Digite uma mensagem: ")
-	update_panels()
-	doupdate()
+	janelaTexto.move(1, 1)
+	janelaTexto.deleteln()
+	janelaTexto.insdelln(1)
+	janelaTexto.box()
+	janelaTexto.move(1, 1)
+	janelaTexto.addstr("Digite uma mensagem: ")
+	curses.panel.update_panels()
+	curses.doupdate()
 
 	if msgAEnviar == "sair()" or conectado == False:
 		clientSocket.close()
 		conectado = False
-		endwin()
+		curses.endwin()
 		break
 	if apelido == False:
 		apelido = msgAEnviar
