@@ -71,7 +71,7 @@ def threadDoCliente(cliente):
 				quintaUltima = ultimasMensagens.get(False)
 
 			if ultimasMensagens.qsize() == 4 and quintaUltima != None and (time.time() - quintaUltima) <= ANTI_FLOOD_TIME_LIMIT:
-				cliente.conn.send("__WARNING__:Voce nao pode enviar mais de 5 mensagens a cada 2 segundos.\r\n")
+				cliente.conn.send("__WARNING__:Voce enviou muitas mensagens! Aguarde 10 segundos.\r\n")
 			else:
 				broadcast(cliente.apelido + " escreveu: " + msg)
 				ultimasMensagens.put(time.time())

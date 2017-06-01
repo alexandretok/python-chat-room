@@ -9,6 +9,7 @@ serverPort = 6666
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((serverName, serverPort))
 conectado = True
+flood = 0
 
 linha = 2
 apelido = False
@@ -46,7 +47,7 @@ curses.panel.update_panels()
 curses.doupdate()
 
 def threadRecebe():
-	global clientSocket, conectado, linha, janelaPrincipal, apelido, janelaUsuarios
+	global clientSocket, conectado, linha, janelaPrincipal, apelido, janelaUsuarios, flood
 	clientSocket.settimeout(1)
 	while conectado:
 		try:
@@ -75,6 +76,7 @@ def threadRecebe():
 				continue
 			elif msgRecebida.find("__WARNING__:") > -1:
 				janelaPrincipal.addstr(msgRecebida.replace("__WARNING__:", ""), curses.color_pair(3))
+				flood = time.time()
 			elif msgRecebida.find("entrou na sala.") > -1:
 				janelaPrincipal.addstr(msgRecebida, curses.color_pair(1))
 			elif msgRecebida.find("- " + apelido + " escreveu:") > -1:
@@ -113,4 +115,9 @@ while conectado:
 		break
 	if apelido == False:
 		apelido = msgAEnviar
+
+	# Verifica se passaram-se os 10 segundos
+	if time.time() - flood < 10:
+		continue;
+	
 	clientSocket.send(msgAEnviar)
